@@ -1,0 +1,78 @@
+Halmos Symbolic Execution Report — Arxia (ARX) v1.0.0
+=======================================================
+Tool:    Halmos 0.1.13 (Z3 solver 4.16.0.0)
+Target:  contracts/Arxia.sol
+Test:    test/ArxiaHalmos.t.sol
+Date:    2026-05-23
+Command: halmos --contract ArxiaHalmosTest
+
+Compiler: Solc 0.8.34 (post LostStorageArrayWriteOnSlotOverflow fix)
+Files:    42 (Arxia.sol + OpenZeppelin v5.0.2 dependencies + forge-std)
+
+=======================================================
+RESULTS: 8 / 8 INVARIANTS PROVEN
+=======================================================
+
+[PASS] check_TotalSupplyAtDeploy()                                  paths: 1   time: 0.04s
+       Proves: arx.totalSupply() == MAX_SUPPLY  immediately after constructor execution.
+
+[PASS] check_TransferIsExact(address,uint256)                       paths: 3   time: 1.01s
+       Proves: For ANY symbolic (to, amount) with valid preconditions
+       (to != 0, to != sender, amount <= balance), transfer() decreases
+       sender by exactly `amount`, increases receiver by exactly `amount`,
+       and leaves totalSupply unchanged. NO FEE, NO ROUNDING.
+
+[PASS] check_BurnIsExact(uint256)                                   paths: 2   time: 0.59s
+       Proves: For ANY symbolic amount <= balance, burn() decreases the
+       caller's balance AND totalSupply by exactly `amount`.
+
+[PASS] check_TotalSupplyNeverIncreases_AfterTransfer(...)           paths: 2   time: 0.55s
+       Proves: transfer() never increases totalSupply (preservation).
+
+[PASS] check_TotalSupplyNeverIncreases_AfterBurn(uint256)           paths: 2   time: 0.46s
+       Proves: burn() never increases totalSupply (monotonicity).
+
+[PASS] check_ApproveIsExact(address,uint256)                        paths: 2   time: 0.92s
+       Proves: For ANY symbolic (spender, value), approve() sets allowance
+       to exactly `value` (OZ v5 standard, no race-condition mitigation).
+
+[PASS] check_TotalSupplyBoundedAfterTransfer(address,uint256)       paths: 2   time: 0.58s
+       Proves: After any transfer from the deploy state, totalSupply <= MAX_SUPPLY.
+
+[PASS] check_TotalSupplyBoundedAfterBurn(uint256)                   paths: 1   time: 0.48s
+       Proves: After any burn from the deploy state, totalSupply <= MAX_SUPPLY.
+
+=======================================================
+SUMMARY
+=======================================================
+
+Total: 8 passed, 0 failed
+Wall time: 5.24s
+Paths explored: 15 (over all checks)
+Counterexamples: 0
+
+Symbolic execution covers ALL possible inputs in the specified preconditions
+(via Z3 SMT solver). Unlike fuzz testing which samples random concrete inputs,
+Halmos provides mathematical proof of invariants over the entire input space.
+
+The `revert TotalSupplyMismatch()` defensive branch in the constructor was not
+included as a check function because it is unreachable by construction:
+the six allocation constants sum to MAX_SUPPLY exactly.
+
+=======================================================
+LIMITATIONS / SCOPE NOTES
+=======================================================
+
+- Permit (EIP-2612) signature verification is not in the symbolic execution scope
+  because it involves cryptographic ecrecover operations that Halmos models as
+  uninterpreted functions. Permit semantics are covered by concrete Foundry
+  tests including replay-attack reverts (test/Arxia.t.sol).
+
+- The invariants check the BEHAVIOR of the contract's public surface. They do
+  not prove the ABSENCE of side channels (e.g., gas griefing) but the contract
+  has no gas-relevant control flow beyond standard OZ ERC20 operations.
+
+- Verification is single-transaction. Multi-transaction sequence invariants
+  are covered by Foundry's invariant testing (test/Arxia.t.sol line 459).
+
+=======================================================

@@ -1,0 +1,53 @@
+Slither Static Analysis Report — Arxia (ARX) v1.0.0
+=====================================================
+Tool:       Slither (Trail of Bits)
+Target:     contracts/Arxia.sol
+Config:     .slither.config.json (fail_on = "low", lib/test/script excluded)
+Date:       2026-05-23
+Command:    slither . --config-file .slither.config.json
+Compiler:   Solidity 0.8.34 (pinned)
+OZ version: v5.0.2
+
+=====================================================
+RESULT: 0 findings across 101 detectors, 21 contracts analyzed
+=====================================================
+
+Raw Slither output:
+
+    INFO:Slither:. analyzed (21 contracts with 101 detectors), 0 result(s) found
+
+=====================================================
+SCOPE NOTES
+=====================================================
+
+- The `filter_paths` setting in .slither.config.json excludes `lib/`, `test/`,
+  and `script/` so that only the audited contract (contracts/Arxia.sol) and its
+  OpenZeppelin dependencies are part of the detector run. OpenZeppelin v5.0.2
+  is externally audited and its detectors filtered separately.
+
+- 101 detectors include the full Slither default set: reentrancy variants,
+  arbitrary-from-in-transferFrom, divide-before-multiply, weak-prng, locked-ether,
+  uninitialized-state, shadowing-state, missing-zero-check, calls-loop,
+  reentrancy-no-eth, timestamp, assembly, low-level-calls, naming-convention,
+  pragma, similar-names, too-many-digits, constable-states, external-function,
+  immutable-states, var-read-using-this, and the full set of static-analysis
+  detectors documented in https://github.com/crytic/slither/wiki/Detector-Documentation
+
+- Slither's `incorrect-exp` detector specifically checks for XOR/exponentiation
+  confusion (e.g., `(3 * x) ^ 2` mistaken for exponentiation). It did not trigger
+  on the OZ `Math.mulDiv` line that uses XOR as the 4-bit Newton-Raphson seed
+  (intentional bitwise XOR, peer-reviewed algorithm by Remco Bloemen used by
+  Uniswap V3 FullMath.mulDiv and every modern OZ-based DeFi protocol).
+
+=====================================================
+REPRODUCIBILITY
+=====================================================
+
+To reproduce this result locally:
+
+    pip install slither-analyzer
+    slither . --config-file .slither.config.json
+
+Expected output: "0 result(s) found".
+
+=====================================================

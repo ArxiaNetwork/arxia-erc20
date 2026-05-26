@@ -1,0 +1,30 @@
+# Foundry
+out/
+cache/
+broadcast/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Coverage
+lcov.info
+coverage/
+
+# Internal notes (never push to public repo)
+CONTEXT.md
+docs/internal/
+NOTES.md
+TODO.md

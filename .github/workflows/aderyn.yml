@@ -1,0 +1,41 @@
+name: Aderyn
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'contracts/**'
+      - 'foundry.toml'
+      - '.github/workflows/aderyn.yml'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - 'foundry.toml'
+
+jobs:
+  aderyn:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Run Aderyn
+        uses: Cyfrin/aderyn-action@v1
+        with:
+          aderyn-version: '0.6.8'
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aderyn-report
+          path: report.md

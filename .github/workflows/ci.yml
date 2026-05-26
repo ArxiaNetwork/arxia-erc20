@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Show Foundry versions
+        run: |
+          forge --version
+          cast --version
+
+      - name: Build
+        run: forge build --sizes
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            out
+            cache
+          key: foundry-build-${{ github.sha }}
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Run tests
+        run: forge test -vvv
+
+      - name: Run tests (CI profile — high-iteration fuzz + invariant)
+        run: FOUNDRY_PROFILE=ci forge test
+        env:
+          FOUNDRY_PROFILE: ci
+
+  coverage:
+    name: Coverage
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Generate coverage report
+        run: forge coverage --report summary --report lcov
+
+      - name: Upload lcov artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-lcov
+          path: lcov.info
+
+  slither:
+    name: Slither
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.0
+        with:
+          target: '.'
+          slither-config: '.slither.config.json'
+          fail-on: low
+
+  deterministic-build:
+    name: Deterministic build check
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: First build and hash
+        run: |
+          forge clean
+          forge build
+          sha256sum out/Arxia.sol/Arxia.json > hash1.txt
+          cat hash1.txt
+
+      - name: Second build and hash
+        run: |
+          forge clean
+          forge build
+          sha256sum out/Arxia.sol/Arxia.json > hash2.txt
+          cat hash2.txt
+
+      - name: Compare hashes
+        run: |
+          if ! diff hash1.txt hash2.txt; then
+            echo "::error::Build is NOT deterministic — bytecode_hash and cbor_metadata stripping may be misconfigured."
+            exit 1
+          fi
+          echo "Build is deterministic."
