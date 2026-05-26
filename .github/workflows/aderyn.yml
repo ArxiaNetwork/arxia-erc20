@@ -28,10 +28,24 @@ jobs:
         with:
           version: stable
 
+      - name: Install Aderyn v0.6.8 (Linux x86_64)
+        run: |
+          set -euo pipefail
+          VERSION="aderyn-v0.6.8"
+          BASE="https://github.com/Cyfrin/aderyn/releases/download/${VERSION}"
+          ASSET="aderyn-x86_64-unknown-linux-gnu.tar.xz"
+          curl -sSL -o "$ASSET" "${BASE}/${ASSET}"
+          curl -sSL -o "${ASSET}.sha256" "${BASE}/${ASSET}.sha256"
+          sha256sum -c "${ASSET}.sha256"
+          tar xJf "$ASSET"
+          BIN=$(find . -maxdepth 2 -type f -name aderyn -executable | head -1)
+          test -n "$BIN" || { echo "aderyn binary not found post-extract"; exit 1; }
+          sudo install -m 0755 "$BIN" /usr/local/bin/aderyn
+          aderyn --version
+          rm -rf aderyn-x86_64-unknown-linux-gnu* "$ASSET"*
+
       - name: Run Aderyn
-        uses: Cyfrin/aderyn-action@v1
-        with:
-          aderyn-version: '0.6.8'
+        run: aderyn . -o report.md
 
       - name: Upload report
         uses: actions/upload-artifact@v4

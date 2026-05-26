@@ -24,7 +24,9 @@
 
 ### Option A — GitHub Actions (canonical)
 
-This is the audit-friendly approach. Aderyn runs in CI on every push and pull request:
+This is the audit-friendly approach. Aderyn runs in CI on every push and pull request.
+
+We install the Aderyn binary directly with SHA256 verification rather than using a marketplace action, since no official Cyfrin/aderyn-action exists. This pattern is more audit-defensible (explicit version pinning, hash verification, no remote shell execution):
 
 ```yaml
 # .github/workflows/aderyn.yml (already committed)
@@ -37,8 +39,18 @@ jobs:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
       - uses: foundry-rs/foundry-toolchain@v1
-      - uses: Cyfrin/aderyn-action@v1
-        with: { aderyn-version: '0.6.8' }
+      - name: Install Aderyn v0.6.8 (Linux x86_64)
+        run: |
+          VERSION="aderyn-v0.6.8"
+          BASE="https://github.com/Cyfrin/aderyn/releases/download/${VERSION}"
+          ASSET="aderyn-x86_64-unknown-linux-gnu.tar.xz"
+          curl -sSL -o "$ASSET" "${BASE}/${ASSET}"
+          curl -sSL -o "${ASSET}.sha256" "${BASE}/${ASSET}.sha256"
+          sha256sum -c "${ASSET}.sha256"
+          tar xJf "$ASSET"
+          sudo install -m 0755 $(find . -maxdepth 2 -name aderyn -executable) /usr/local/bin/aderyn
+      - name: Run Aderyn
+        run: aderyn . -o report.md
 ```
 
 Advantages:
