@@ -43,11 +43,11 @@
 
 The deployer EOA (or multisig) that submits the `CREATE` transaction has **no privileged role** on the contract after deployment. It is indistinguishable from any other holder thereafter. The deployer must:
 - Hold enough of the network's native token to pay the deployment gas (~1.5M gas units)
-- Correctly supply the six allocation addresses as constructor arguments
+- Correctly supply the six addresses as constructor arguments
 
 Mis-typing an address at deploy time is irreversible — the contract is immutable.
 
-### 2.2 Six allocation recipients
+### 2.2 Six constructor recipients
 
 The six addresses passed to the constructor (see §3.1) are assumed to be:
 
@@ -94,7 +94,7 @@ constructor(
 
 The constructor:
 1. Validates all six addresses are non-zero (`revert ZeroAddress()` otherwise)
-2. Mints the predetermined allocations to each address via OpenZeppelin's internal `_mint()`
+2. Mints the fixed amounts set in the contract to each address via OpenZeppelin's internal `_mint()`
 3. Verifies `totalSupply() == MAX_SUPPLY` post-mint (`revert TotalSupplyMismatch()` if violated — unreachable by construction)
 4. Initializes the ERC20Permit EIP-712 domain separator
 
@@ -288,7 +288,7 @@ forge build
 
 # Run all Foundry tests
 forge test --gas-report
-# Expected: 43 tests passed, 0 failed (plus invariant + fuzz)
+# Expected: 43 tests passed, 0 failed (fuzz and invariant tests included)
 
 # Coverage
 forge coverage --report summary
@@ -325,7 +325,7 @@ A test network deployment validates the full pipeline end to end. The contract a
 
 ### 10.5 Focus areas suggested for auditor scrutiny
 
-1. **Constructor invariant arithmetic**: confirm the six allocation constants sum to exactly `MAX_SUPPLY`. Modifying any constant requires updating the sum or the constructor will revert with `TotalSupplyMismatch()`.
+1. **Constructor invariant arithmetic**: confirm the six constructor mint constants sum to exactly `MAX_SUPPLY`. Modifying any constant requires updating the sum or the constructor will revert with `TotalSupplyMismatch()`.
 2. **No admin surface**: invoke `owner()`, `mint(...)`, `pause(...)`, any `setX(...)` on the deployed contract — all should revert with "function selector not found".
 3. **Permit replay resistance**: confirm that a permit signature for nonce N cannot be re-submitted after the nonce has incremented to N+1.
 4. **Permit deadline enforcement**: confirm `permit` with `deadline < block.timestamp` reverts with `ERC2612ExpiredSignature`.
