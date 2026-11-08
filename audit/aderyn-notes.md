@@ -55,7 +55,7 @@ jobs:
 
 Advantages:
 - Reproducible, timestamped runs
-- Reports posted as PR comments
+- Report uploaded as a CI artifact (`aderyn-report`)
 - No local toolchain pollution
 - Public CI history can be verified by reviewers and auditors
 
@@ -96,7 +96,7 @@ Slither's 0-findings outcome on Arxia is strong evidence that Aderyn would also 
 
 ## Notes for audit submission
 
-A self-contained line for the InterFi audit submission cover note:
+A self-contained line for an audit submission cover note:
 
 > "Static analysis was performed with Slither (101 detectors, 0 findings — report attached). Aderyn execution is configured via GitHub Actions for continuous monitoring; the action runs on every push and pull request. The static analysis signal is fully covered by Slither's broader detector set."
 
@@ -113,4 +113,4 @@ This is technically defensible and does not weaken the audit credibility. Review
 ---
 
 **Document date**: 2026-05-23
-**Conclusion**: Slither + Halmos provide sufficient static and symbolic analysis evidence for InterFi submission. Aderyn local execution is out of scope for the current submission and tracked for future CI integration.
+**Conclusion**: Slither and Halmos provide the static and symbolic analysis evidence for the audit submission. Aderyn is configured in CI (`.github/workflows/aderyn.yml`); local execution is out of scope.

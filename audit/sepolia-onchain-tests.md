@@ -1,3 +1,5 @@
+> **Historical record, 2026-05-23.** Test network deployment of version 1.0.0 of the token contract. The token contract exists on a test network only; no token is live, no holders, no market. Statements below about future deployments, an audit submission or the earlier design are superseded; see the [README](../README.md).
+
 # Arxia (ARX) — On-chain Functional Tests on Base Sepolia
 
 **Date**: 2026-05-23
@@ -11,7 +13,7 @@ This document records end-to-end functional tests performed on the live Sepolia 
 
 ## Test sequence
 
-All 5 transactions confirmed on Base Sepolia mainnet. Sum-of-balances invariant verified at the end: `sum(balances) == totalSupply` exactly.
+All 5 transactions confirmed on Base Sepolia. Sum-of-balances invariant verified at the end: `sum(balances) == totalSupply` exactly.
 
 ### Test 1 — ERC-20 transfer
 
