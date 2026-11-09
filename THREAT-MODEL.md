@@ -1,9 +1,11 @@
 # Arxia (ARX) — Threat Model
 
+> **Note.** This threat model dates from May 2026, before the token contract audit, and is kept as a record of the pre-audit analysis. Its network, distribution and bridge references describe plans Arxia no longer follows. ERC-20 token contract audited by SolidProof, zero findings. The protocol, bridge, wallet and embedded code have not been audited yet. The token contract exists on a test network only; no token is live, there are no holders and there is no market.
+
 **Document version**: 1.0.0
 **Last updated**: 2026-05-23
 **Scope**: `contracts/Arxia.sol`
-**Status**: Pre-audit submission to InterFi Network
+**Status**: ERC-20 token contract audited by SolidProof, zero findings. The protocol, bridge, wallet and embedded code have not been audited yet.
 **Related**: [SECURITY.md](./SECURITY.md) · [DEPLOYMENT.md](./DEPLOYMENT.md) · [README.md](./README.md) · [audit/halmos-report.txt](./audit/halmos-report.txt) · [audit/sepolia-onchain-tests.md](./audit/sepolia-onchain-tests.md)
 
 ---
@@ -14,8 +16,8 @@
 |---|---|
 | Contract | `Arxia` (ARX) ERC-20 |
 | Version | v1.0.0 |
-| Network | Base mainnet (chainId 8453) — deployment TBD post-audit |
-| Total supply | 1,000,000,000 ARX (10^15 base units, fixed at construction) |
+| Network | Test network only (see §10.4). No token is live, no holders, no market. |
+| Total supply | Minted once at construction (`MAX_SUPPLY`); no mint function; holders can burn their own tokens |
 | Decimals | 6 |
 | Compiler | Solidity 0.8.34 (pinned, post LostStorageArrayWriteOnSlotOverflow fix in 0.8.32) |
 | Optimizer | enabled, runs = 200, via_ir = false |
@@ -23,15 +25,15 @@
 | OpenZeppelin | v5.0.2 |
 | **Deployed bytecode SHA256** | `d2a936d316f312da169526c05ac5ee81569a957a674fb603672eee4504bac193` |
 | License | MIT |
-| Security contact | arxialayer1@proton.me |
+| Security contact | arxia.network@proton.me |
 
 **Inheritance chain**: `ERC20`, `ERC20Burnable`, `ERC20Permit` (OpenZeppelin v5.0.2). No `Ownable`, no `Pausable`, no proxy, no upgradeability.
 
 **Validation summary**:
-- **Foundry**: 43 unit/integration/stress tests + 3 fuzz × 10,000 runs + 1 invariant × 1,000 × 100,000 calls — all passing
+- **Foundry**: 39 unit, integration and stress tests, 3 fuzz tests at 10,000 runs and 1 invariant test at 1,000 runs of depth 100 (43 tests in total), all passing at the 2026-05-23 run
 - **Halmos symbolic execution**: 8/8 invariants proven (Z3 SMT solver)
 - **Slither**: 0 findings across 101 detectors
-- **Base Sepolia**: live deployment with verified source code and on-chain functional tests passed for transfer, burn, approve, transferFrom, permit
+- **Test network**: deployment with verified source code; on-chain functional tests passed for transfer, burn, approve, transferFrom, permit (see §10.4)
 
 ---
 
@@ -40,17 +42,17 @@
 ### 2.1 Deployer wallet
 
 The deployer EOA (or multisig) that submits the `CREATE` transaction has **no privileged role** on the contract after deployment. It is indistinguishable from any other holder thereafter. The deployer must:
-- Hold sufficient ETH on Base for the deployment gas (~1.5M units)
-- Correctly supply the six allocation addresses as constructor arguments
+- Hold enough of the network's native token to pay the deployment gas (~1.5M gas units)
+- Correctly supply the six addresses as constructor arguments
 
 Mis-typing an address at deploy time is irreversible — the contract is immutable.
 
-### 2.2 Six allocation recipients
+### 2.2 Six constructor recipients
 
-The six addresses passed to the constructor (node operators, ecosystem, team vesting, IDO, treasury, seed vesting) are assumed to be:
+The six addresses passed to the constructor (see §3.1) are assumed to be:
 
 - **Independent**: not controlled by a single party with a single key
-- **Operationally secure**: Gnosis Safe multisigs (≥ 3-of-5 hardware-wallet signers recommended) or audited vesting contracts (Sablier V2)
+- **Operationally secure**: multisig wallets with hardware-wallet signers, or audited contracts
 - **Not coordinated maliciously**: the contract makes no assumption about their honesty, only their independence
 
 If multiple recipient addresses share a single signer or collude, that is a social/operational risk, not a smart contract risk.
@@ -58,8 +60,8 @@ If multiple recipient addresses share a single signer or collude, that is a soci
 ### 2.3 Token holders
 
 Holders of ARX trust:
-- The cryptography of Ethereum (ECDSA, keccak256)
-- The Base sequencer and OP Stack consensus
+- The EVM's signature and hashing primitives (ECDSA, keccak256)
+- The consensus and sequencing of the network the contract is deployed on
 - The immutability of the deployed bytecode
 
 Holders do **not** trust:
@@ -67,9 +69,9 @@ Holders do **not** trust:
 - Any oracle (none used)
 - Any external contract (no cross-contract calls in any code path)
 
-### 2.4 Future L1 bridge (M24+)
+### 2.4 Future integrations
 
-The future Lock-and-Mint bridge contract to Arxia L1 will be **separately deployed and separately audited**. It will hold ARX in custody (just like any other holder) and mint native ARX on L1 via off-chain validator messages. **It has no pre-existing privilege on this ERC-20 contract.** Bridge analysis is out of scope for this document.
+Any contract that later interacts with ARX does so through the standard ERC-20 interface, like any other address. It has no privilege on this contract. Such contracts are out of scope for this document.
 
 ---
 
@@ -92,7 +94,7 @@ constructor(
 
 The constructor:
 1. Validates all six addresses are non-zero (`revert ZeroAddress()` otherwise)
-2. Mints the predetermined allocations to each address via OpenZeppelin's internal `_mint()`
+2. Mints the fixed amounts set in the contract to each address via OpenZeppelin's internal `_mint()`
 3. Verifies `totalSupply() == MAX_SUPPLY` post-mint (`revert TotalSupplyMismatch()` if violated — unreachable by construction)
 4. Initializes the ERC20Permit EIP-712 domain separator
 
@@ -167,13 +169,13 @@ The contract has no:
 
 ## 5. Failure Cases — Unexpected (None Identified)
 
-After Halmos symbolic execution, Foundry invariant testing, Slither analysis, and Sepolia on-chain testing, **no unexpected failure cases were identified**.
+After Halmos symbolic execution, Foundry invariant testing, Slither analysis, and on-chain testing on the test network, **no unexpected failure cases were identified**.
 
 The following theoretical failure modes are **proven impossible by construction**:
 
 | Theoretical failure | Why impossible |
 |---|---|
-| `TotalSupplyMismatch` revert in constructor | The six allocation constants sum to exactly MAX_SUPPLY: 250 + 200 + 150 + 150 + 130 + 120 = 1,000 million. Mathematically unreachable. Branch retained as a defensive guard against future refactoring. |
+| `TotalSupplyMismatch` revert in constructor | The six constructor mint constants in `contracts/Arxia.sol` sum to exactly `MAX_SUPPLY`. Mathematically unreachable. Branch retained as a defensive guard against future refactoring. |
 | Sum-of-balances ≠ totalSupply | Inherited from OZ ERC20 standard correctness, additionally enforced by Halmos `check_TotalSupplyAtDeploy` and the Foundry invariant test (`invariant_TotalSupplyNeverExceedsMaxSupply`). |
 | Reentrancy attack | Zero external calls in any code path. `_update`, `_mint`, `_burn`, `_approve`, and `permit` all manipulate storage directly without invoking external contracts. |
 | Integer overflow/underflow | Solidity 0.8.34 checked arithmetic enabled by default. No `unchecked { ... }` blocks in custom code. |
@@ -212,7 +214,7 @@ The following invariants are **mathematically proven** by Halmos (Z3 SMT solver)
 8. **No path to mint**
    No public function on the contract can grow `totalSupply` beyond its previous value. Combined with invariant #1, this gives an inductive proof: `totalSupply ≤ MAX_SUPPLY` is preserved through every possible call sequence.
 
-The Foundry invariant test `invariant_TotalSupplyNeverExceedsMaxSupply` additionally exercises 1,000 runs × 100,000 random call sequences without ever violating this property.
+The Foundry invariant test `invariant_TotalSupplyNeverExceedsMaxSupply` additionally runs 1,000 runs of depth 100 (100,000 calls) without ever violating this property.
 
 ---
 
@@ -258,13 +260,9 @@ This threat model covers only `contracts/Arxia.sol`. The following are deliberat
 | Item | Reason |
 |---|---|
 | **OpenZeppelin Contracts v5.0.2** | Externally audited (OpenZeppelin security team, Trail of Bits, Certora, ConsenSys Diligence) |
-| **Sablier V2 LockupLinear** | Audited vesting protocol used as-is for team and seed allocations |
-| **Gnosis Safe multisig** | Audited multisig wallet used for the four non-vesting allocations |
-| **PinkSale presale contract** | Third-party launch platform with its own audit history |
-| **PinkLock LP locker** | Third-party LP locking contract used post-PinkSale finalization |
-| **Future BridgeCustody contract (M24+)** | Separately deployed and separately audited Lock-and-Mint bridge |
-| **arxia.one website + DNS** | Operational infrastructure; covered by SECURITY.md disclosure process |
-| **Off-chain validators (post-bridge)** | Bridge-specific concern |
+| **Addresses set at construction** | External wallets or contracts, not part of this repository |
+| **Any contract that later integrates with ARX** | Separate code, out of scope for this document |
+| **Websites, DNS and other off-chain infrastructure** | Operational; covered by the SECURITY.md disclosure process |
 
 ---
 
@@ -290,7 +288,7 @@ forge build
 
 # Run all Foundry tests
 forge test --gas-report
-# Expected: 43 tests passed, 0 failed (plus invariant + fuzz)
+# Expected: 43 tests passed, 0 failed (fuzz and invariant tests included)
 
 # Coverage
 forge coverage --report summary
@@ -318,21 +316,16 @@ The reference build SHA256 is `d2a936d316f312da169526c05ac5ee81569a957a674fb6036
 # Local build → extract deployedBytecode → SHA256
 forge build
 # Compare with on-chain bytecode after deploy:
-cast code <DEPLOYED_ADDRESS> --rpc-url https://mainnet.base.org
+cast code <DEPLOYED_ADDRESS> --rpc-url <RPC_URL>
 ```
 
-### 10.4 Sepolia reference deployment
+### 10.4 Test network reference deployment
 
-A live testnet deployment validates the full pipeline end-to-end:
-
-- **Contract**: `0x8c2fCd0808Fab8f15C103b1D137209b5d6F0170C`
-- **Network**: Base Sepolia (chainId 84532)
-- **Verified**: https://sepolia.basescan.org/address/0x8c2fcd0808fab8f15c103b1d137209b5d6f0170c#code
-- **On-chain tests**: transfer, burn, approve, transferFrom, permit — all passing. See [audit/sepolia-onchain-tests.md](./audit/sepolia-onchain-tests.md) for individual transaction hashes.
+A test network deployment validates the full pipeline end to end. The contract address, the network, the explorer verification and the transaction hashes of the on-chain tests (transfer, burn, approve, transferFrom, permit, all passing) are recorded in [audit/sepolia-deployment.md](./audit/sepolia-deployment.md) and [audit/sepolia-onchain-tests.md](./audit/sepolia-onchain-tests.md).
 
 ### 10.5 Focus areas suggested for auditor scrutiny
 
-1. **Constructor invariant arithmetic**: confirm the six allocation constants sum to exactly `MAX_SUPPLY`. Modifying any constant requires updating the sum or the constructor will revert with `TotalSupplyMismatch()`.
+1. **Constructor invariant arithmetic**: confirm the six constructor mint constants sum to exactly `MAX_SUPPLY`. Modifying any constant requires updating the sum or the constructor will revert with `TotalSupplyMismatch()`.
 2. **No admin surface**: invoke `owner()`, `mint(...)`, `pause(...)`, any `setX(...)` on the deployed contract — all should revert with "function selector not found".
 3. **Permit replay resistance**: confirm that a permit signature for nonce N cannot be re-submitted after the nonce has incremented to N+1.
 4. **Permit deadline enforcement**: confirm `permit` with `deadline < block.timestamp` reverts with `ERC2612ExpiredSignature`.
@@ -341,9 +334,9 @@ A live testnet deployment validates the full pipeline end-to-end:
 
 ### 10.6 Contact for clarifications
 
-Email: `arxialayer1@proton.me` (ProtonMail — PGP available via `keys.openpgp.org`)
+Email: `arxia.network@proton.me`
 
-For audit-related findings or disputes, please reference this document and any associated transaction hashes from the Sepolia deployment.
+For audit-related findings or disputes, please reference this document and any associated transaction hashes from the test network deployment.
 
 ---
 

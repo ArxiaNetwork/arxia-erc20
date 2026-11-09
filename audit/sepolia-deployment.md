@@ -1,3 +1,5 @@
+> **Historical record, 2026-05-23.** Test network deployment of version 1.0.0 of the token contract. The token contract exists on a test network only; no token is live, no holders, no market. Statements below about future deployments, an audit submission or the earlier design are superseded; see the [README](../README.md).
+
 # Arxia (ARX) — Base Sepolia Testnet Deployment Record
 
 **Date**: 2026-05-23
